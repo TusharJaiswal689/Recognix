@@ -1,4 +1,7 @@
 package com.jasz.recognix
 
-class RecognixApp {
-}
+import android.app.Application
+import dagger.hilt.android.HiltAndroidApp
+
+@HiltAndroidApp
+class RecognixApp : Application()

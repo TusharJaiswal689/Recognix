@@ -1,0 +1,12 @@
+{
+  "efficientdet_lite1": {
+    "inputWidth": 320,
+    "inputHeight": 320,
+    "labelFile": "efficientdet_lite1_labels.txt"
+  },
+  "ssd_mobiledet_v2": {
+    "inputWidth": 320,
+    "inputHeight": 320,
+    "labelFile": "ssd_mobiledet_v2_labels.txt"
+  }
+}
