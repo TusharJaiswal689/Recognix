@@ -1,6 +1,7 @@
 package com.jasz.recognix.data.repository
 
 import android.content.ContentResolver
+import android.content.ContentValues
 import android.net.Uri
 import android.provider.MediaStore
 import com.jasz.recognix.data.local.db.dao.ImageDao
@@ -40,6 +41,14 @@ class MediaRepository @Inject constructor(
         contentResolver.delete(uri, null, null)
         imageDao.deleteTagsForImage(uri.toString())
         imageDao.deleteImage(uri.toString())
+    }
+
+    suspend fun renameImage(uri: Uri, newName: String) = withContext(Dispatchers.IO) {
+        val values = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, newName)
+        }
+        contentResolver.update(uri, values, null, null)
+        // The image URI in our DB doesn't change, so we don't need to update it.
     }
 
     suspend fun clearIndexForFolder(folderPath: String) = withContext(Dispatchers.IO) {

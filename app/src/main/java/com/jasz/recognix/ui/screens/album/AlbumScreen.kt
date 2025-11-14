@@ -8,9 +8,8 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -30,10 +29,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.jasz.recognix.R
 import com.jasz.recognix.utils.startScan
 import java.net.URLEncoder
 
@@ -78,7 +79,7 @@ fun AlbumScreen(
                 title = { Text(albumLabel) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
@@ -86,7 +87,7 @@ fun AlbumScreen(
                         Icon(Icons.Default.Delete, contentDescription = "Clear Index")
                     }
                     IconButton(onClick = { startScan(context, albumPath) }) {
-                        Icon(Icons.Default.DocumentScanner, contentDescription = "Scan")
+                        Icon(painterResource(id = R.drawable.ic_scan), contentDescription = "Scan")
                     }
                     IconButton(onClick = {
                         val encodedPath = URLEncoder.encode(albumPath, "UTF-8")

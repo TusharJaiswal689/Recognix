@@ -53,4 +53,11 @@ class ViewerViewModel @Inject constructor(
             _navigationEvent.emit("-1") // Navigate back
         }
     }
+
+    fun renameImage(newName: String) {
+        viewModelScope.launch {
+            mediaRepository.renameImage(imageUri, newName)
+            _uiState.value = _uiState.value.copy(imageName = newName)
+        }
+    }
 }

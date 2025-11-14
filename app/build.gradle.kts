@@ -94,4 +94,7 @@ dependencies {
 
     // Cropper
     implementation(libs.cropper)
+
+    // SplashScreen
+    implementation(libs.androidx.splashscreen)
 }

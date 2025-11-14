@@ -44,7 +44,7 @@ fun AppNavHost() {
             val folderPath = backStackEntry.arguments?.getString("folderPath")?.let { URLDecoder.decode(it, "UTF-8") } ?: ""
             SearchScreen(navController, currentFolder = folderPath)
         }
-        composable("viewer/{imageUri}") { backStackEntry ->
+        composable("viewer/{imageUri}") { 
             ImageViewerScreen(navController)
         }
     }
