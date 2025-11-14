@@ -5,7 +5,7 @@ import android.content.Context
 import androidx.room.Room
 import com.jasz.recognix.data.local.db.RecognixDatabase
 import com.jasz.recognix.data.local.db.dao.ImageDao
-import com.jasz.recognix.ml.ObjectDetector
+import com.jasz.recognix.ml.RecognixObjectDetector
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -41,7 +41,7 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideObjectDetector(@ApplicationContext context: Context): ObjectDetector {
-        return ObjectDetector(context)
+    fun provideObjectDetector(@ApplicationContext context: Context): RecognixObjectDetector {
+        return RecognixObjectDetector(context)
     }
 }

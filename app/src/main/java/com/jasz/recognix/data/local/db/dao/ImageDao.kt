@@ -15,7 +15,7 @@ interface ImageDao {
     @Upsert
     suspend fun upsertTags(tags: List<ImageTagEntity>)
 
-    @Query("SELECT * FROM images WHERE folder_path LIKE :folderPath || '%' AND uri IN (SELECT imageUri FROM image_tags WHERE tag IN (:tags)) ORDER BY last_modified DESC")
+    @Query("SELECT * FROM images WHERE folderPath LIKE :folderPath || '%' AND uri IN (SELECT imageUri FROM image_tags WHERE tag IN (:tags)) ORDER BY lastModified DESC")
     fun findByTags(folderPath: String, tags: List<String>): Flow<List<ImageEntity>>
 
     @Query("SELECT * FROM images WHERE uri = :uri")
@@ -27,9 +27,9 @@ interface ImageDao {
     @Query("DELETE FROM images WHERE uri = :imageUri")
     suspend fun deleteImage(imageUri: String)
 
-    @Query("DELETE FROM image_tags WHERE imageUri IN (SELECT uri FROM images WHERE folder_path LIKE :folderPath || '%')")
+    @Query("DELETE FROM image_tags WHERE imageUri IN (SELECT uri FROM images WHERE folderPath LIKE :folderPath || '%')")
     suspend fun clearTagsForFolder(folderPath: String)
 
-    @Query("DELETE FROM images WHERE folder_path LIKE :folderPath || '%'")
+    @Query("DELETE FROM images WHERE folderPath LIKE :folderPath || '%'")
     suspend fun clearImagesForFolder(folderPath: String)
 }

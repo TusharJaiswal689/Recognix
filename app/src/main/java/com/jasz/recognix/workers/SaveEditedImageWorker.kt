@@ -3,7 +3,6 @@ package com.jasz.recognix.workers
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.BitmapFactory
-import android.net.Uri
 import android.provider.MediaStore
 import androidx.core.net.toUri
 import androidx.hilt.work.HiltWorker
@@ -12,7 +11,7 @@ import androidx.work.WorkerParameters
 import com.jasz.recognix.data.local.db.dao.ImageDao
 import com.jasz.recognix.data.local.db.entity.ImageEntity
 import com.jasz.recognix.data.local.db.entity.ImageTagEntity
-import com.jasz.recognix.ml.ObjectDetector
+import com.jasz.recognix.ml.RecognixObjectDetector
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Dispatchers
@@ -23,7 +22,7 @@ class SaveEditedImageWorker @AssistedInject constructor(
     @Assisted private val context: Context,
     @Assisted workerParams: WorkerParameters,
     private val imageDao: ImageDao,
-    private val objectDetector: ObjectDetector
+    private val recognixObjectDetector: RecognixObjectDetector
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
@@ -54,7 +53,7 @@ class SaveEditedImageWorker @AssistedInject constructor(
         val pfd = context.contentResolver.openFileDescriptor(newItemUri, "r") ?: return@withContext Result.failure()
         pfd.use { descriptor ->
             val bitmap = BitmapFactory.decodeFileDescriptor(descriptor.fileDescriptor)
-            val tags = objectDetector.detect(bitmap)
+            val tags = recognixObjectDetector.detect(bitmap)
             val imageEntity = ImageEntity(
                 uri = newItemUri.toString(),
                 folderPath = newItemUri.toString().substringBeforeLast('/'),

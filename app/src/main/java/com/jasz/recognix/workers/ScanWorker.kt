@@ -11,7 +11,7 @@ import com.jasz.recognix.data.local.datastore.PreferenceDataStore
 import com.jasz.recognix.data.local.db.dao.ImageDao
 import com.jasz.recognix.data.local.db.entity.ImageEntity
 import com.jasz.recognix.data.local.db.entity.ImageTagEntity
-import com.jasz.recognix.ml.ObjectDetector
+import com.jasz.recognix.ml.RecognixObjectDetector
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Dispatchers
@@ -23,7 +23,7 @@ class ScanWorker @AssistedInject constructor(
     @Assisted private val context: Context,
     @Assisted workerParams: WorkerParameters,
     private val imageDao: ImageDao,
-    private val objectDetector: ObjectDetector,
+    private val recognixObjectDetector: RecognixObjectDetector,
     private val preferenceDataStore: PreferenceDataStore
 ) : CoroutineWorker(context, workerParams) {
 
@@ -59,7 +59,7 @@ class ScanWorker @AssistedInject constructor(
                 val pfd = context.contentResolver.openFileDescriptor(uri, "r") ?: continue
                 pfd.use { descriptor ->
                     val bitmap = BitmapFactory.decodeFileDescriptor(descriptor.fileDescriptor)
-                    val tags = objectDetector.detect(bitmap)
+                    val tags = recognixObjectDetector.detect(bitmap)
                     val imageEntity = ImageEntity(
                         uri = uri.toString(),
                         folderPath = folderPath,
