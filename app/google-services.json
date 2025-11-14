@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "878319833583",
+    "project_id": "recognix-689",
+    "storage_bucket": "recognix-689.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:878319833583:android:b5002a0ca1477fe827261a",
+        "android_client_info": {
+          "package_name": "com.example.recognix689"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA8f24QbqoqA6fvet_7tNNHig58hgtqb7A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:878319833583:android:e4ad22ede8c7e34a27261a",
+        "android_client_info": {
+          "package_name": "com.jasz.recognix"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA8f24QbqoqA6fvet_7tNNHig58hgtqb7A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
