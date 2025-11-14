@@ -36,6 +36,7 @@ import java.net.URLEncoder
 @Composable
 fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltViewModel()) {
     val context = LocalContext.current
+    val uiState by viewModel.uiState.collectAsState()
     var showClearIndexDialog by remember { mutableStateOf(false) }
 
     RequestMediaPermission(
@@ -88,8 +89,6 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
             }
         )
     }
-
-    val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
         topBar = {

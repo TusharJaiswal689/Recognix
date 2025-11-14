@@ -30,8 +30,9 @@ class SaveEditedImageWorker @AssistedInject constructor(
         val imageUri = imageUriString.toUri()
 
         // 1. Add to MediaStore
+        val displayName = "EDITED_" + System.currentTimeMillis()
         val values = ContentValues().apply {
-            put(MediaStore.Images.Media.DISPLAY_NAME, "EDITED_" + System.currentTimeMillis())
+            put(MediaStore.Images.Media.DISPLAY_NAME, displayName)
             put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
             put(MediaStore.Images.Media.IS_PENDING, 1)
         }
@@ -56,7 +57,11 @@ class SaveEditedImageWorker @AssistedInject constructor(
             val tags = recognixObjectDetector.detect(bitmap)
             val imageEntity = ImageEntity(
                 uri = newItemUri.toString(),
+                displayName = displayName,
                 folderPath = newItemUri.toString().substringBeforeLast('/'),
+                width = null, // We don't have this info from the cropper result
+                height = null,
+                size = null,
                 lastModified = System.currentTimeMillis() / 1000
             )
             val imageTagEntities = tags.map { ImageTagEntity(imageUri = newItemUri.toString(), tag = it) }

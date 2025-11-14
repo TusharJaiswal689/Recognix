@@ -14,10 +14,10 @@ fun AppNavHost() {
 
     NavHost(navController = navController, startDestination = "home") {
         composable("home") { HomeScreen(navController) }
-        composable("results") { ResultsScreen(navController) }
-        composable("viewer/{uri}") { backStackEntry ->
-            val uri = backStackEntry.arguments?.getString("uri")
-            ImageViewerScreen(navController, uri)
+        composable("results") { ResultsScreen() }
+        composable("viewer/{uri}") {
+            // The ViewModel will extract the URI from the backStackEntry's arguments
+            ImageViewerScreen(navController)
         }
     }
 }

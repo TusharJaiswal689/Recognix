@@ -35,7 +35,11 @@ class ScanWorker @AssistedInject constructor(
 
         val projection = arrayOf(
             MediaStore.Images.Media._ID,
-            MediaStore.Images.Media.DATE_MODIFIED
+            MediaStore.Images.Media.DATE_MODIFIED,
+            MediaStore.Images.Media.DISPLAY_NAME,
+            MediaStore.Images.Media.SIZE,
+            MediaStore.Images.Media.WIDTH,
+            MediaStore.Images.Media.HEIGHT
         )
 
         val selection = "${MediaStore.Images.Media.DATA} LIKE ? AND ${MediaStore.Images.Media.DATE_MODIFIED} > ?"
@@ -50,6 +54,10 @@ class ScanWorker @AssistedInject constructor(
         )?.use { cursor ->
             val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
             val dateModifiedColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_MODIFIED)
+            val displayNameColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DISPLAY_NAME)
+            val sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.SIZE)
+            val widthColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.WIDTH)
+            val heightColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.HEIGHT)
 
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idColumn)
@@ -62,7 +70,11 @@ class ScanWorker @AssistedInject constructor(
                     val tags = recognixObjectDetector.detect(bitmap)
                     val imageEntity = ImageEntity(
                         uri = uri.toString(),
+                        displayName = cursor.getString(displayNameColumn),
                         folderPath = folderPath,
+                        width = cursor.getInt(widthColumn),
+                        height = cursor.getInt(heightColumn),
+                        size = cursor.getLong(sizeColumn),
                         lastModified = dateModified
                     )
                     val imageTagEntities = tags.map { ImageTagEntity(imageUri = uri.toString(), tag = it) }
