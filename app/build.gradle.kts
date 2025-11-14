@@ -1,7 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    // alias(libs.plugins.kotlin.compose) // This was incorrect
     alias(libs.plugins.hilt)
     alias(libs.plugins.kotlin.kapt)
     alias(libs.plugins.google.services)
@@ -11,6 +10,19 @@ plugins {
 android {
     namespace = "com.jasz.recognix"
     compileSdk = 36
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    }
+
+    kotlinOptions {
+        jvmTarget = "21"
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.10"
+    }
 
     defaultConfig {
         applicationId = "com.jasz.recognix"
@@ -35,10 +47,18 @@ android {
     buildFeatures {
         compose = true
     }
+
 }
 
-kotlin {
-    jvmToolchain(11)
+kapt {
+    correctErrorTypes = true
+    arguments {
+        arg("room.schemaLocation", "$projectDir/schemas")
+        arg("room.incremental", "true")
+        arg("room.expandProjection", "true")
+        // Disable verifier — required fix on Windows
+        arg("room.verifySchema", "false")
+    }
 }
 
 dependencies {
@@ -57,6 +77,7 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    kapt("org.xerial:sqlite-jdbc:3.34.0")
 
     // Hilt
     implementation(libs.hilt.android)
@@ -65,8 +86,9 @@ dependencies {
     kapt(libs.androidx.hilt.compiler)
 
     // Room
-    implementation(libs.androidx.room.runtime)
-    kapt(libs.androidx.room.compiler)
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    kapt(libs.room.compiler)
 
     // WorkManager
     implementation(libs.androidx.work.runtime.ktx)
