@@ -34,6 +34,7 @@ import coil.compose.AsyncImage
 import com.canhub.cropper.CropImageContract
 import com.canhub.cropper.CropImageContractOptions
 import com.canhub.cropper.CropImageOptions
+import com.jasz.recognix.utils.formatSize
 import com.jasz.recognix.utils.startSaveEditedImageWorker
 import kotlinx.coroutines.flow.collectLatest
 
@@ -56,69 +57,36 @@ fun ImageViewerScreen(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text("Delete Image") },
             text = { Text("Are you sure you want to delete this image? This action cannot be undone.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.deleteImage()
-                        showDeleteDialog = false
-                    }
-                ) {
-                    Text("Delete")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
-                }
-            }
+            confirmButton = { TextButton(onClick = { viewModel.deleteImage(); showDeleteDialog = false }) { Text("Delete") } },
+            dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") } }
         )
     }
 
-    if (showInfoDialog) {
-        AlertDialog(
-            onDismissRequest = { showInfoDialog = false },
-            title = { Text("Image Info") },
-            text = {
-                Column {
-                    Text("Name: ${uiState.imageName}")
-                    Text("Path: ${viewModel.imageUri}")
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showInfoDialog = false }) {
-                    Text("OK")
-                }
-            }
-        )
-    }
-
-    if (showRenameDialog) {
-        AlertDialog(
-            onDismissRequest = { showRenameDialog = false },
-            title = { Text("Rename Image") },
-            text = {
-                OutlinedTextField(
-                    value = newName,
-                    onValueChange = { newName = it },
-                    label = { Text("New name") }
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.renameImage(newName)
-                        showRenameDialog = false
+    uiState.image?.let { image ->
+        if (showInfoDialog) {
+            AlertDialog(
+                onDismissRequest = { showInfoDialog = false },
+                title = { Text("Image Info") },
+                text = {
+                    Column {
+                        Text("Name: ${image.displayName}")
+                        Text("Path: ${image.folderPath}")
+                        Text("Size: ${formatSize(image.size ?: 0)}")
                     }
-                ) {
-                    Text("Rename")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showRenameDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
+                },
+                confirmButton = { TextButton(onClick = { showInfoDialog = false }) { Text("OK") } }
+            )
+        }
+
+        if (showRenameDialog) {
+            AlertDialog(
+                onDismissRequest = { showRenameDialog = false },
+                title = { Text("Rename Image") },
+                text = { OutlinedTextField(value = newName, onValueChange = { newName = it }, label = { Text("New name") }) },
+                confirmButton = { TextButton(onClick = { viewModel.renameImage(newName); showRenameDialog = false }) { Text("Rename") } },
+                dismissButton = { TextButton(onClick = { showRenameDialog = false }) { Text("Cancel") } }
+            )
+        }
     }
 
     val cropActivityLauncher = rememberLauncherForActivityResult(CropImageContract()) { result ->
@@ -142,57 +110,18 @@ fun ImageViewerScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(uiState.imageName ?: "") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
+                title = { /* No title as per request */ },
+                navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") } },
                 actions = {
-                    IconButton(onClick = { showMenu = !showMenu }) {
+                    IconButton(onClick = { showMenu = true }) {
                         Icon(Icons.Default.MoreVert, contentDescription = "More Options")
                     }
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Info") },
-                            onClick = { 
-                                showInfoDialog = true
-                                showMenu = false 
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Jump to location") },
-                            onClick = { 
-                                viewModel.onJumpToLocationClicked()
-                                showMenu = false 
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Rename") },
-                            onClick = { 
-                                newName = uiState.imageName ?: ""
-                                showRenameDialog = true
-                                showMenu = false 
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Edit") },
-                            onClick = {
-                                val cropOptions = CropImageContractOptions(viewModel.imageUri, CropImageOptions())
-                                cropActivityLauncher.launch(cropOptions)
-                                showMenu = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Delete") },
-                            onClick = { 
-                                showDeleteDialog = true
-                                showMenu = false 
-                            }
-                        )
+                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                        DropdownMenuItem(text = { Text("Info") }, onClick = { showInfoDialog = true; showMenu = false })
+                        DropdownMenuItem(text = { Text("Jump to location") }, onClick = { viewModel.onJumpToLocationClicked(); showMenu = false })
+                        DropdownMenuItem(text = { Text("Rename") }, onClick = { newName = uiState.image?.displayName ?: ""; showRenameDialog = true; showMenu = false })
+                        DropdownMenuItem(text = { Text("Edit") }, onClick = { val cropOptions = CropImageContractOptions(viewModel.imageUri, CropImageOptions()); cropActivityLauncher.launch(cropOptions); showMenu = false })
+                        DropdownMenuItem(text = { Text("Delete") }, onClick = { showDeleteDialog = true; showMenu = false })
                     }
                 }
             )

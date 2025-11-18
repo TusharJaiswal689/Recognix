@@ -7,5 +7,6 @@ data class Album(
     val label: String,
     val uri: Uri,
     val count: Int,
+    val size: Long,
     val path: String
 )

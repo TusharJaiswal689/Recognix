@@ -9,6 +9,8 @@ import com.jasz.recognix.data.local.db.entity.ImageEntity
 import com.jasz.recognix.data.model.Album
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -19,16 +21,17 @@ class MediaRepository @Inject constructor(
     private val imageDao: ImageDao
 ) {
 
-    suspend fun getAlbums(): List<Album> = withContext(Dispatchers.IO) {
-        val albums = mutableListOf<Album>()
+    fun getAlbums(): Flow<List<Album>> = flow {
+        val albums = mutableMapOf<Long, Album>()
         val projection = arrayOf(
             MediaStore.Images.Media.BUCKET_ID,
             MediaStore.Images.Media.BUCKET_DISPLAY_NAME,
             MediaStore.Images.Media._ID,
-            MediaStore.Images.Media.DATA
+            MediaStore.Images.Media.DATA,
+            MediaStore.Images.Media.SIZE
         )
 
-        val sortOrder = "${MediaStore.Images.Media.BUCKET_DISPLAY_NAME} ASC"
+        val sortOrder = "${MediaStore.Images.Media.DATE_MODIFIED} DESC"
 
         contentResolver.query(
             MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
@@ -41,26 +44,28 @@ class MediaRepository @Inject constructor(
             val bucketNameColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
             val imageIdColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
             val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
-
-            val albumsMap = mutableMapOf<Long, Album>()
+            val sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.SIZE)
 
             while (cursor.moveToNext()) {
                 val bucketId = cursor.getLong(bucketIdColumn)
-                if (!albumsMap.containsKey(bucketId)) {
+                val size = cursor.getLong(sizeColumn)
+                val album = albums[bucketId]
+                if (album == null) {
                     val bucketName = cursor.getString(bucketNameColumn)
                     val imageId = cursor.getLong(imageIdColumn)
                     val imageUri = Uri.withAppendedPath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, imageId.toString())
                     val path = cursor.getString(dataColumn).substringBeforeLast('/')
-                    albumsMap[bucketId] = Album(bucketId, bucketName, imageUri, 0, path)
+                    albums[bucketId] = Album(bucketId, bucketName, imageUri, 1, size, path)
+                } else {
+                    albums[bucketId] = album.copy(
+                        count = album.count + 1,
+                        size = album.size + size
+                    )
                 }
-                // We still iterate to get the count, but only add the album once.
-                val currentAlbum = albumsMap[bucketId]!!
-                albumsMap[bucketId] = currentAlbum.copy(count = currentAlbum.count + 1)
             }
-            albums.addAll(albumsMap.values)
         }
-        albums
-    }
+        emit(albums.values.toList())
+    }.flowOn(Dispatchers.IO)
 
     suspend fun getImagesForAlbum(albumPath: String): List<Uri> = withContext(Dispatchers.IO) {
         val images = mutableListOf<Uri>()

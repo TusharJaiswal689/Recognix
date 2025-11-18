@@ -29,9 +29,10 @@ class ScanWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val folderPath = inputData.getString(KEY_FOLDER_PATH) ?: return@withContext Result.failure()
+        val isRootScan = folderPath == "/"
         preferenceDataStore.setScanFolderPath(folderPath)
 
-        val lastScanTimestamp = preferenceDataStore.scanFolderPath.first()?.let { preferenceDataStore.getLastScanTimestamp(it) } ?: 0L
+        val lastScanTimestamp = preferenceDataStore.getLastScanTimestamp(folderPath)
 
         val projection = arrayOf(
             MediaStore.Images.Media._ID,
@@ -39,11 +40,20 @@ class ScanWorker @AssistedInject constructor(
             MediaStore.Images.Media.DISPLAY_NAME,
             MediaStore.Images.Media.SIZE,
             MediaStore.Images.Media.WIDTH,
-            MediaStore.Images.Media.HEIGHT
+            MediaStore.Images.Media.HEIGHT,
+            MediaStore.Images.Media.DATA
         )
 
-        val selection = "${MediaStore.Images.Media.DATA} LIKE ? AND ${MediaStore.Images.Media.DATE_MODIFIED} > ?"
-        val selectionArgs = arrayOf("$folderPath%", lastScanTimestamp.toString())
+        val selection = if (isRootScan) {
+            "${MediaStore.Images.Media.DATE_MODIFIED} > ?"
+        } else {
+            "${MediaStore.Images.Media.DATA} LIKE ? AND ${MediaStore.Images.Media.DATE_MODIFIED} > ?"
+        }
+        val selectionArgs = if (isRootScan) {
+            arrayOf(lastScanTimestamp.toString())
+        } else {
+            arrayOf("$folderPath%", lastScanTimestamp.toString())
+        }
 
         context.contentResolver.query(
             MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
@@ -58,11 +68,13 @@ class ScanWorker @AssistedInject constructor(
             val sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.SIZE)
             val widthColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.WIDTH)
             val heightColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.HEIGHT)
+            val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
 
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idColumn)
                 val dateModified = cursor.getLong(dateModifiedColumn)
                 val uri = Uri.withAppendedPath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id.toString())
+                val path = cursor.getString(dataColumn).substringBeforeLast('/')
 
                 val pfd = context.contentResolver.openFileDescriptor(uri, "r") ?: continue
                 pfd.use { descriptor ->
@@ -71,7 +83,7 @@ class ScanWorker @AssistedInject constructor(
                     val imageEntity = ImageEntity(
                         uri = uri.toString(),
                         displayName = cursor.getString(displayNameColumn),
-                        folderPath = folderPath,
+                        folderPath = path,
                         width = cursor.getInt(widthColumn),
                         height = cursor.getInt(heightColumn),
                         size = cursor.getLong(sizeColumn),
