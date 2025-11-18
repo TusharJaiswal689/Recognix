@@ -1,18 +1,21 @@
 package com.jasz.recognix.ui.screens.album
 
-import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jasz.recognix.data.model.MediaItem
 import com.jasz.recognix.data.repository.MediaRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class AlbumUiState(
-    val images: List<Uri> = emptyList(),
+    val media: List<MediaItem> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null
 )
@@ -20,29 +23,19 @@ data class AlbumUiState(
 @HiltViewModel
 class AlbumViewModel @Inject constructor(
     private val mediaRepository: MediaRepository,
-    private val savedStateHandle: SavedStateHandle
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(AlbumUiState())
-    val uiState = _uiState.asStateFlow()
+    private val albumPath: String = savedStateHandle.get<String>("albumPath") ?: ""
 
-    val albumPath: String = savedStateHandle.get<String>("albumPath") ?: ""
-
-    init {
-        loadImages()
-    }
-
-    private fun loadImages() {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
-            try {
-                val images = mediaRepository.getImagesForAlbum(albumPath)
-                _uiState.value = _uiState.value.copy(images = images, isLoading = false)
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(error = e.message, isLoading = false)
-            }
-        }
-    }
+    val uiState: StateFlow<AlbumUiState> = mediaRepository.getMediaForAlbum(albumPath)
+        .map { media -> AlbumUiState(media = media) }
+        .catch { e -> emit(AlbumUiState(error = e.message)) }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = AlbumUiState(isLoading = true)
+        )
 
     fun clearIndex() {
         viewModelScope.launch {

@@ -118,7 +118,6 @@ fun ImageViewerScreen(
                     }
                     DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                         DropdownMenuItem(text = { Text("Info") }, onClick = { showInfoDialog = true; showMenu = false })
-                        DropdownMenuItem(text = { Text("Jump to location") }, onClick = { viewModel.onJumpToLocationClicked(); showMenu = false })
                         DropdownMenuItem(text = { Text("Rename") }, onClick = { newName = uiState.image?.displayName ?: ""; showRenameDialog = true; showMenu = false })
                         DropdownMenuItem(text = { Text("Edit") }, onClick = { val cropOptions = CropImageContractOptions(viewModel.imageUri, CropImageOptions()); cropActivityLauncher.launch(cropOptions); showMenu = false })
                         DropdownMenuItem(text = { Text("Delete") }, onClick = { showDeleteDialog = true; showMenu = false })

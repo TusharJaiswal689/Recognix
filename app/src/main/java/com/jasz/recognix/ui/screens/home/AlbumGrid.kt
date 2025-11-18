@@ -48,7 +48,7 @@ fun AlbumGrid(albums: List<Album>, navController: NavController) {
                     )
                     Column(modifier = Modifier.padding(8.dp)) {
                         Text(text = album.label, style = MaterialTheme.typography.titleMedium)
-                        Text(text = "${album.count} items • ${formatSize(album.size)}", style = MaterialTheme.typography.bodySmall)
+                        Text(text = "${album.itemCount} items • ${formatSize(album.size)}", style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }

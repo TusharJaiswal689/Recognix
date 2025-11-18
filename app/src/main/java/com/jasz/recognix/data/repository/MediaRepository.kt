@@ -1,12 +1,15 @@
 package com.jasz.recognix.data.repository
 
 import android.content.ContentResolver
+import android.content.ContentUris
 import android.content.ContentValues
 import android.net.Uri
 import android.provider.MediaStore
 import com.jasz.recognix.data.local.db.dao.ImageDao
 import com.jasz.recognix.data.local.db.entity.ImageEntity
 import com.jasz.recognix.data.model.Album
+import com.jasz.recognix.data.model.MediaItem
+import com.jasz.recognix.data.model.MediaType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -24,41 +27,50 @@ class MediaRepository @Inject constructor(
     fun getAlbums(): Flow<List<Album>> = flow {
         val albums = mutableMapOf<Long, Album>()
         val projection = arrayOf(
-            MediaStore.Images.Media.BUCKET_ID,
-            MediaStore.Images.Media.BUCKET_DISPLAY_NAME,
-            MediaStore.Images.Media._ID,
-            MediaStore.Images.Media.DATA,
-            MediaStore.Images.Media.SIZE
+            MediaStore.Files.FileColumns.BUCKET_ID,
+            MediaStore.Files.FileColumns.BUCKET_DISPLAY_NAME,
+            MediaStore.Files.FileColumns._ID,
+            MediaStore.Files.FileColumns.DATA,
+            MediaStore.Files.FileColumns.SIZE,
+            MediaStore.Files.FileColumns.MEDIA_TYPE
         )
 
-        val sortOrder = "${MediaStore.Images.Media.DATE_MODIFIED} DESC"
+        val selection = "(${MediaStore.Files.FileColumns.MEDIA_TYPE} = ? OR ${MediaStore.Files.FileColumns.MEDIA_TYPE} = ?)"
+        val selectionArgs = arrayOf(
+            MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString(),
+            MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString()
+        )
+
+        val sortOrder = "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC"
 
         contentResolver.query(
-            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+            MediaStore.Files.getContentUri("external"),
             projection,
-            null,
-            null,
+            selection,
+            selectionArgs,
             sortOrder
         )?.use { cursor ->
-            val bucketIdColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_ID)
-            val bucketNameColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
-            val imageIdColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-            val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
-            val sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.SIZE)
+            val bucketIdColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.BUCKET_ID)
+            val bucketNameColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.BUCKET_DISPLAY_NAME)
+            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
+            val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATA)
+            val sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.SIZE)
 
             while (cursor.moveToNext()) {
                 val bucketId = cursor.getLong(bucketIdColumn)
                 val size = cursor.getLong(sizeColumn)
                 val album = albums[bucketId]
+
+                // Use the most recent item as the album cover
                 if (album == null) {
+                    val id = cursor.getLong(idColumn)
                     val bucketName = cursor.getString(bucketNameColumn)
-                    val imageId = cursor.getLong(imageIdColumn)
-                    val imageUri = Uri.withAppendedPath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, imageId.toString())
+                    val itemUri = ContentUris.withAppendedId(MediaStore.Files.getContentUri("external"), id)
                     val path = cursor.getString(dataColumn).substringBeforeLast('/')
-                    albums[bucketId] = Album(bucketId, bucketName, imageUri, 1, size, path)
+                    albums[bucketId] = Album(bucketId, bucketName, itemUri, 1, size, path)
                 } else {
                     albums[bucketId] = album.copy(
-                        count = album.count + 1,
+                        itemCount = album.itemCount + 1,
                         size = album.size + size
                     )
                 }
@@ -67,37 +79,43 @@ class MediaRepository @Inject constructor(
         emit(albums.values.toList())
     }.flowOn(Dispatchers.IO)
 
-    suspend fun getImagesForAlbum(albumPath: String): List<Uri> = withContext(Dispatchers.IO) {
-        val images = mutableListOf<Uri>()
-        val projection = arrayOf(MediaStore.Images.Media._ID)
-        val selection = "${MediaStore.Images.Media.DATA} LIKE ?"
-        val selectionArgs = arrayOf("$albumPath%")
+    fun getMediaForAlbum(albumPath: String): Flow<List<MediaItem>> = flow {
+        val media = mutableListOf<MediaItem>()
+        val projection = arrayOf(
+            MediaStore.Files.FileColumns._ID,
+            MediaStore.Files.FileColumns.MEDIA_TYPE
+        )
+
+        val selection = "${MediaStore.Files.FileColumns.DATA} LIKE ? AND (${MediaStore.Files.FileColumns.MEDIA_TYPE} = ? OR ${MediaStore.Files.FileColumns.MEDIA_TYPE} = ?)"
+        val selectionArgs = arrayOf("$albumPath%", MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString(), MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString())
+        val sortOrder = "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC"
 
         contentResolver.query(
-            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+            MediaStore.Files.getContentUri("external"),
             projection,
             selection,
             selectionArgs,
-            null
+            sortOrder
         )?.use { cursor ->
-            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
+            val mediaTypeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
+
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idColumn)
-                images.add(Uri.withAppendedPath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id.toString()))
+                val type = when (cursor.getInt(mediaTypeColumn)) {
+                    MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE -> MediaType.IMAGE
+                    else -> MediaType.VIDEO
+                }
+                val uri = ContentUris.withAppendedId(MediaStore.Files.getContentUri("external"), id)
+                media.add(MediaItem(uri, type))
             }
         }
-        images
-    }
+        emit(media)
+    }.flowOn(Dispatchers.IO)
 
-    fun searchImages(query: String, currentFolder: String): Flow<List<ImageEntity>> {
-        val tags = query.split(",", ".").map { it.trim() }.filter { it.isNotEmpty() }
-        val folder = if (currentFolder == "/") "" else currentFolder // Use "" for root, which will match all paths with LIKE
-        return imageDao.findByTags(folder, tags)
-    }
+    fun searchImages(query: String, currentFolder: String): Flow<List<ImageEntity>> = imageDao.findByTags(if (currentFolder == "/") "" else currentFolder, query.split(",", ".").map { it.trim() }.filter { it.isNotEmpty() })
 
-    suspend fun getImageByUri(uri: String): ImageEntity? = withContext(Dispatchers.IO) {
-        imageDao.getImageByUri(uri)
-    }
+    fun getImageByUri(uri: String): Flow<ImageEntity?> = imageDao.getImageByUri(uri)
 
     suspend fun deleteImage(uri: Uri) = withContext(Dispatchers.IO) {
         contentResolver.delete(uri, null, null)
@@ -110,7 +128,6 @@ class MediaRepository @Inject constructor(
             put(MediaStore.Images.Media.DISPLAY_NAME, newName)
         }
         contentResolver.update(uri, values, null, null)
-        // The image URI in our DB doesn't change, so we don't need to update it.
     }
 
     suspend fun clearIndexForFolder(folderPath: String) = withContext(Dispatchers.IO) {

@@ -1,5 +1,6 @@
 package com.jasz.recognix.ui.screens.home
 
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,6 +37,10 @@ import androidx.navigation.NavController
 import com.jasz.recognix.R
 import com.jasz.recognix.utils.RequestMediaPermission
 import com.jasz.recognix.utils.startScan
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import java.net.URLEncoder
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -46,6 +52,17 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
     var showClearIndexDialog by remember { mutableStateOf(false) }
 
     RequestMediaPermission(onPermissionGranted = { /* ViewModel now handles loading */ }, onPermissionDenied = { /* TODO */ })
+
+    LaunchedEffect(viewModel) {
+        viewModel.uiState
+            .filterNotNull()
+            .distinctUntilChanged { old, new -> old.isModelLoaded == new.isModelLoaded }
+            .onEach { state ->
+                val message = if (state.isModelLoaded == true) "ML Model Loaded Successfully" else "ML Model Failed to Load"
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            }
+            .launchIn(this)
+    }
 
     if (showClearIndexDialog) {
         AlertDialog(

@@ -5,9 +5,12 @@ import androidx.lifecycle.viewModelScope
 import com.jasz.recognix.data.local.datastore.PreferenceDataStore
 import com.jasz.recognix.data.model.Album
 import com.jasz.recognix.data.repository.MediaRepository
+import com.jasz.recognix.ml.RecognixObjectDetector
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
@@ -18,23 +21,27 @@ data class HomeUiState(
     val albums: List<Album> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
-    val unfinishedScanPath: String? = null
+    val unfinishedScanPath: String? = null,
+    val isModelLoaded: Boolean? = null
 )
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val mediaRepository: MediaRepository,
-    private val preferenceDataStore: PreferenceDataStore
+    private val preferenceDataStore: PreferenceDataStore,
+    private val objectDetector: RecognixObjectDetector
 ) : ViewModel() {
 
     private val albumsFlow = mediaRepository.getAlbums()
     private val unfinishedScanPathFlow = preferenceDataStore.scanFolderPath
+    private val modelLoadedFlow = objectDetector.isLoaded
 
     val uiState: StateFlow<HomeUiState> = combine(
         albumsFlow,
-        unfinishedScanPathFlow
-    ) { albums, unfinishedScanPath ->
-        HomeUiState(albums = albums, unfinishedScanPath = unfinishedScanPath)
+        unfinishedScanPathFlow,
+        modelLoadedFlow
+    ) { albums, unfinishedScanPath, isModelLoaded ->
+        HomeUiState(albums = albums, unfinishedScanPath = unfinishedScanPath, isModelLoaded = isModelLoaded)
     }
     .catch { e -> emit(HomeUiState(error = e.message)) }
     .stateIn(

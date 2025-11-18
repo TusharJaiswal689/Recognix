@@ -3,6 +3,8 @@ package com.jasz.recognix.ml
 import android.content.Context
 import android.graphics.Bitmap
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import org.tensorflow.lite.support.image.ImageProcessor
 import org.tensorflow.lite.support.image.TensorImage
 import org.tensorflow.lite.support.image.ops.ResizeOp
@@ -18,6 +20,9 @@ class RecognixObjectDetector @Inject constructor(@ApplicationContext private val
 
     private var detector: ObjectDetector? = null
 
+    private val _isLoaded = MutableStateFlow(false)
+    val isLoaded = _isLoaded.asStateFlow()
+
     init {
         setup()
     }
@@ -31,18 +36,16 @@ class RecognixObjectDetector @Inject constructor(@ApplicationContext private val
                 .setMaxResults(MAX_RESULTS)
                 .build()
             detector = ObjectDetector.createFromFileAndOptions(context, MODEL_NAME, options)
+            _isLoaded.value = true
         } catch (e: IOException) {
-            // TODO: Log this error to Crashlytics
+            _isLoaded.value = false
         } catch (e: IllegalStateException) {
-            // TODO: Log this error to Crashlytics
+            _isLoaded.value = false
         }
     }
 
     fun detect(bitmap: Bitmap): List<String> {
-        if (detector == null) {
-            // This should not happen if the init block is successful, but as a fallback:
-            setup()
-        }
+        if (detector == null) return emptyList()
 
         val imageProcessor = ImageProcessor.Builder()
             .add(ResizeOp(320, 320, ResizeOp.ResizeMethod.BILINEAR))

@@ -19,7 +19,10 @@ interface ImageDao {
     fun findByTags(folderPath: String, tags: List<String>): Flow<List<ImageEntity>>
 
     @Query("SELECT * FROM images WHERE uri = :uri")
-    suspend fun getImageByUri(uri: String): ImageEntity?
+    fun getImageByUri(uri: String): Flow<ImageEntity?>
+
+    @Query("SELECT * FROM images")
+    fun getAllImages(): Flow<List<ImageEntity>>
 
     @Query("DELETE FROM image_tags WHERE imageUri = :imageUri")
     suspend fun deleteTagsForImage(imageUri: String)
